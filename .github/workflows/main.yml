@@ -30,17 +30,24 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    env:
+      SSH_KEY: ${{ secrets.EC2_SSH_KEY }}  # Set the SSH key as an environment variable
 
     steps:
-      - name: SSH into EC2 and pull the Docker image
+      - name: Create SSH key file from environment variable
+        run: |
+          echo "$SSH_KEY" > /tmp/ssh_key
+          chmod 600 /tmp/ssh_key
+
+      - name: SSH into EC2 and deploy
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key_path: /tmp/ssh_key  # Use the SSH key file created from the environment variable
           port: 22
           script: |
             docker pull dhanayanth/html:latest
             docker stop html || true
             docker rm html || true
-            docker run -d --name html -p 80:80 dhanayanth/html:latest
+            docker run -d --html -p 80:80 dhanayanth/html:latest
